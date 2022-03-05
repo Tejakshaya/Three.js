@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="zh">
 	<head>
 		<meta charset="utf-8" />
 		<base href="../../../" />
@@ -12,18 +12,18 @@
 		<h1>[name]</h1>
 
 		<p class="desc">
-		A helper object to assist with visualizing a [page:Skeleton Skeleton].
-		The helper is rendered using a [page:LineBasicMaterial LineBasicMaterial].
+		用来模拟骨骼 [page:Skeleton Skeleton] 的辅助对象.
+		该辅助对象使用 [page:LineBasicMaterial LineBasicMaterial] 材质.
 		</p>
 
-		<h2>Code Example</h2>
+		<h2>代码示例</h2>
 
 		<code>
 		const helper = new THREE.SkeletonHelper( skinnedMesh );
 		scene.add( helper );
 		</code>
 
-		<h2>Examples</h2>
+		<h2>例子</h2>
 
 		<p>
 			[example:webgl_animation_skinning_blending WebGL / animation / skinning / blending]<br />
@@ -31,7 +31,7 @@
 			[example:webgl_loader_bvh WebGL / loader / bvh ]
 		</p>
 
-		<h2>Constructor</h2>
+		<h2>构造函数</h2>
 
 
 		<h3>[name]( [param:Object3D object] )</h3>
@@ -40,11 +40,12 @@
 		a hierarchy of [page:Bone Bone]s (via [page:Object3D.children]).
 		</p>
 
-		<h2>Properties</h2>
+
+		<h2>属性</h2>
 
 		<h3>[property:Array bones]</h3>
 		<p>
-		The list of bones that the helper renders as [page:Line Lines].
+		辅助对象使用 [page:Line Lines] 渲染的骨数组.
 		</p>
 
 		<h3>[property:Boolean isSkeletonHelper]</h3>
@@ -54,10 +55,11 @@
 
 		<h3>[property:Object3D root]</h3>
 		<p>
-		The object passed in the constructor.
+		构造函数传入的对象.
 		</p>
 
-		<h2>Source</h2>
+
+		<h2>源码</h2>
 
 		<p>
 			[link:https://github.com/mrdoob/three.js/blob/master/src/[path].js src/[path].js]
