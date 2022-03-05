@@ -1,19 +1,24 @@
-( function () {
+import {
+	WireframeGeometry
+} from 'three';
+import { LineSegmentsGeometry } from '../lines/LineSegmentsGeometry.js';
 
-	class WireframeGeometry2 extends THREE.LineSegmentsGeometry {
+class WireframeGeometry2 extends LineSegmentsGeometry {
 
-		constructor( geometry ) {
+	constructor( geometry ) {
 
-			super();
-			this.type = 'WireframeGeometry2';
-			this.fromWireframeGeometry( new THREE.WireframeGeometry( geometry ) ); // set colors, maybe
+		super();
 
-		}
+		this.type = 'WireframeGeometry2';
+
+		this.fromWireframeGeometry( new WireframeGeometry( geometry ) );
+
+		// set colors, maybe
 
 	}
 
-	WireframeGeometry2.prototype.isWireframeGeometry2 = true;
+}
 
-	THREE.WireframeGeometry2 = WireframeGeometry2;
+WireframeGeometry2.prototype.isWireframeGeometry2 = true;
 
-} )();
+export { WireframeGeometry2 };
