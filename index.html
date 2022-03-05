@@ -2,23 +2,22 @@
 <html lang="en">
 	<head>
 		<meta charset="utf-8">
-		<title>three.js docs</title>
+		<title>three.js examples</title>
 		<meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
 		<link rel="shortcut icon" href="../files/favicon_white.ico" media="(prefers-color-scheme: dark)"/>
 		<link rel="shortcut icon" href="../files/favicon.ico" media="(prefers-color-scheme: light)" />
 		<link rel="stylesheet" type="text/css" href="../files/main.css">
-		<!-- console sandbox -->
-		<script src="../build/three.min.js" async defer></script>
 	</head>
 	<body>
+
 		<div id="panel">
 
 			<div id="header">
 				<h1><a href="https://threejs.org">three.js</a></h1>
 
 				<div id="sections">
-					<span class="selected">docs</span>
-					<a href="../examples/#webgl_animation_keyframes">examples</a>
+					<a href="../docs/index.html#manual/introduction/Creating-a-scene">docs</a>
+					<span class="selected">examples</span>
 				</div>
 
 				<div id="expandButton"></div>
@@ -27,125 +26,124 @@
 			<div id="panelScrim"></div>
 
 			<div id="contentWrapper">
+
 				<div id="inputWrapper">
 					<input placeholder="" type="text" id="filterInput" autocorrect="off" autocapitalize="off" spellcheck="false" />
 					<div id="exitSearchButton"></div>
-					<select id="language">
-						<option value="en">en</option>
-						<option value="ar">ar</option>
-						<option value="ko">한국어</option>
-						<option value="zh">中文</option>
-						<option value="ja">日本語</option>
-					</select>
 				</div>
-				<div id="content"></div>
+
+				<div id="content">
+					<img id="previewsToggler" src="./files/thumbnails.svg" width="20" height="20" />
+				</div>
 			</div>
 
 		</div>
 
-		<iframe name="viewer"></iframe>
+		<iframe id="viewer" name="viewer" allow="fullscreen; xr-spatial-tracking;"></iframe>
+
+		<a id="button" target="_blank"><img src="../files/ic_code_black_24dp.svg"></a>
 
 		<script>
 
 		const panel = document.getElementById( 'panel' );
 		const content = document.getElementById( 'content' );
-		const expandButton = document.getElementById( 'expandButton' );
-		const exitSearchButton = document.getElementById( 'exitSearchButton' );
-		const panelScrim = document.getElementById( 'panelScrim' );
+		const viewer = document.getElementById( 'viewer' );
 		const filterInput = document.getElementById( 'filterInput' );
-		let iframe = document.querySelector( 'iframe' );
+		const exitSearchButton = document.getElementById( 'exitSearchButton' );
+		const expandButton = document.getElementById( 'expandButton' );
+		const viewSrcButton = document.getElementById( 'button' );
+		const panelScrim = document.getElementById( 'panelScrim' );
+		const previewsToggler = document.getElementById( 'previewsToggler' );
 
 		const sectionLink = document.querySelector( '#sections > a' );
 		const sectionDefaultHref = sectionLink.href;
 
-		const pageProperties = {};
-		const titles = {};
-		const categoryElements = [];
+		const links = {};
+		const validRedirects = new Map();
+		const container = document.createElement( 'div' );
 
-		let navigation;
+		let selected = null;
 
 		init();
 
 		async function init() {
 
-			const list = await ( await fetch( 'list.json' ) ).json();
+			content.appendChild( container );
 
-			// *BufferGeometry to *Geometry
+			viewSrcButton.style.display = 'none';
 
-			if ( /Instanced/.exec( window.location.hash ) === null && /([\w]+)BufferGeometry$/.exec( window.location.hash ) ) {
+			const files = await ( await fetch( 'files.json' ) ).json();
+			const tags = await ( await fetch( 'tags.json' ) ).json();
 
-				window.location.hash = window.location.hash.replace( 'BufferGeometry', 'Geometry' );
+			for ( const key in files ) {
 
-			}
+				const section = files[ key ];
 
-			const hash = window.location.hash.substring( 1 );
+				const header = document.createElement( 'h2' );
+				header.textContent = key;
+				header.setAttribute( 'data-category', key );
+				container.appendChild( header );
 
-			// Localisation
+				for ( let i = 0; i < section.length; i ++ ) {
 
-			let language = 'en';
+					const file = section[ i ];
 
-			if ( /^(api|manual|examples)/.test( hash ) ) {
+					const link = createLink( file );
+					container.appendChild( link );
 
-				const hashLanguage = /^(api|manual|examples)\/(en|ar|ko|zh|ja)\//.exec( hash );
-
-				if ( hashLanguage === null ) {
-
-					// Route old non-localised api links
-
-					window.location.hash = hash.replace( /^(api|manual|examples)/, '$1/en' );
-
-				} else {
-
-					language = hashLanguage[ 2 ];
+					links[ file ] = link;
+					validRedirects.set( file, file + '.html' );
 
 				}
 
 			}
 
-			const languageSelect = document.getElementById( 'language' );
-			languageSelect.value = language;
-			languageSelect.addEventListener( 'change', function () {
+			if ( window.location.hash !== '' ) {
 
-				setLanguage( this.value );
+				const file = window.location.hash.substring( 1 );
 
-			} );
+				// use a predefined map of redirects to avoid untrusted URL redirection due to user-provided value
 
-			function setLanguage( value ) {
+				if ( validRedirects.has( file ) === true ) {
 
-				language = value;
+					selectFile( file );
+					viewer.src = validRedirects.get( file );
+					viewer.style.display = 'unset';
 
-				createNavigation( list, language );
-				updateFilter();
-				autoChangeUrlLanguage( language );
+				}
 
 			}
 
-			// Functionality for hamburger button (on small devices)
+			if ( viewer.src === '' ) {
 
-			expandButton.onclick = function ( event ) {
+				viewer.srcdoc = document.getElementById( 'PlaceholderHTML' ).innerHTML;
+				viewer.style.display = 'unset';
 
-				event.preventDefault();
-				panel.classList.toggle( 'open' );
+			}
 
-			};
+			filterInput.value = extractQuery();
 
-			panelScrim.onclick = function ( event ) {
+			if ( filterInput.value !== '' ) {
 
-				event.preventDefault();
-				panel.classList.toggle( 'open' );
+				panel.classList.add( 'searchFocused' );
 
-			};
+				updateFilter( files, tags );
 
+			} else {
 
-			// Functionality for search/filter input field
+				updateLink( '' );
 
-			filterInput.onfocus = function () {
+			}
+
+			// Events
+
+			filterInput.onfocus = function ( ) {
 
 				panel.classList.add( 'searchFocused' );
 
 			};
 
-			filterInput.onblur = function () {
+			filterInput.onblur = function ( ) {
 
 				if ( filterInput.value === '' ) {
 
@@ -155,70 +153,74 @@
 
 			};
 
-			filterInput.oninput = function () {
-
-				updateFilter();
-
-			};
-
-			exitSearchButton.onclick = function () {
+			exitSearchButton.onclick = function ( ) {
 
 				filterInput.value = '';
-				updateFilter();
+				updateFilter( files, tags );
 				panel.classList.remove( 'searchFocused' );
 
 			};
 
-			// Activate content and title change on browser navigation
+			filterInput.addEventListener( 'input', function () {
 
-			window.onpopstate = createNewIframe;
+				updateFilter( files, tags );
 
-			// Create the navigation panel and configure the iframe
+			} );
 
-			createNavigation( list, language );
-			createNewIframe();
 
-			// Handle search query
+			expandButton.addEventListener( 'click', function ( event ) {
 
-			filterInput.value = extractQuery();
+				event.preventDefault();
+				panel.classList.toggle( 'open' );
 
-			if ( filterInput.value !== '' ) {
+			} );
 
-				panel.classList.add( 'searchFocused' );
+			panelScrim.onclick = function ( event ) {
 
-				updateFilter();
+				event.preventDefault();
+				panel.classList.toggle( 'open' );
 
-			} else {
+			};
 
-				updateLink( '' );
+			previewsToggler.onclick = function ( event ) {
+
+				event.preventDefault();
+				content.classList.toggle( 'minimal' );
+
+			};
+
+			// iOS iframe auto-resize workaround
+
+			if ( /(iPad|iPhone|iPod)/g.test( navigator.userAgent ) ) {
+
+				viewer.style.width = getComputedStyle( viewer ).width;
+				viewer.style.height = getComputedStyle( viewer ).height;
+				viewer.setAttribute( 'scrolling', 'no' );
 
 			}
 
 		}
 
-		// Navigation Panel
+		function createLink( file ) {
 
-		function createLink( pageName, pageURL ) {
+			const template = `
+				<div class="card">
+					<a href="${file}.html" target="viewer">
+						<div class="cover">
+							<img src="screenshots/${ file }.jpg" loading="lazy" width="400" />
+						</div>
+						<div class="title">${getName( file )}</div>
+					</a>
+				</div>
+			`;
 
-			const link = document.createElement( 'a' );
-			link.href = pageURL + '.html';
-			link.textContent = pageName;
-			link.setAttribute( 'target', 'viewer' );
-			link.addEventListener( 'click', function ( event ) {
+			const link = createElementFromHTML( template );
+
+			link.querySelector( 'a[target="viewer"]' ).addEventListener( 'click', function ( event ) {
 
 				if ( event.button !== 0 || event.ctrlKey || event.altKey || event.metaKey ) return;
 
-				window.location.hash = pageURL;
-				panel.classList.remove( 'open' );
-
-
-				content.querySelectorAll( 'a' ).forEach( function ( item ) {
-
-					item.classList.remove( 'selected' );
-
-				} );
-
-				link.classList.add( 'selected' );
+				selectFile( file );
 
 			} );
 
@@ -226,115 +228,152 @@
 
 		}
 
-		function createNavigation( list, language ) {
+		function selectFile( file ) {
 
-			if ( navigation !== undefined ) {
+			if ( selected !== null ) links[ selected ].classList.remove( 'selected' );
 
-				content.removeChild( navigation );
+			links[ file ].classList.add( 'selected' );
+
+			window.location.hash = file;
+			viewer.focus();
+			viewer.style.display = 'unset';
+
+			panel.classList.remove( 'open' );
+
+			selected = file;
+
+			// Reveal "View source" button and set attributes to this example
+			viewSrcButton.style.display = '';
+			viewSrcButton.href = 'https://github.com/mrdoob/three.js/blob/master/examples/' + selected + '.html';
+			viewSrcButton.title = 'View source code for ' + getName( selected ) + ' on GitHub';
+
+		}
+
+		function updateFilter( files, tags ) {
+
+			let v = filterInput.value.trim();
+			v = v.replace( /\s+/gi, ' ' ); // replace multiple whitespaces with a single one
+
+			if ( v !== '' ) {
+
+				window.history.replaceState( {}, '', '?q=' + v + window.location.hash );
+
+			} else {
+
+				window.history.replaceState( {}, '', window.location.pathname + window.location.hash );
 
 			}
 
-			// Create the navigation panel using data from list.js
+			const exp = new RegExp( v, 'gi' );
 
-			navigation = document.createElement( 'div' );
-			content.appendChild( navigation );
+			for ( const key in files ) {
 
-			if ( language === 'ar' ) {
+				const section = files[ key ];
 
-				navigation.style.direction = 'rtl';
+				for ( let i = 0; i < section.length; i ++ ) {
+
+					filterExample( section[ i ], exp, tags );
+
+				}
 
 			}
 
-			const localList = list[ language ];
-			const selectedPage = window.location.hash.substring( 1 );
+			layoutList( files );
 
-			for ( const section in localList ) {
+			updateLink( v );
 
-				// Create sections
+		}
 
-				const categories = localList[ section ];
+		function updateLink( search ) {
 
-				const sectionHead = document.createElement( 'h2' );
-				sectionHead.textContent = section;
-				navigation.appendChild( sectionHead );
+			// update docs link
 
-				for ( const category in categories ) {
+			if ( search ) {
 
-					// Create categories
+				const link = sectionLink.href.split( /[?#]/ )[ 0 ];
+				sectionLink.href = `${link}?q=${search}`;
 
-					const pages = categories[ category ];
+			} else {
 
-					const categoryContainer = document.createElement( 'div' );
-					navigation.appendChild( categoryContainer );
+				sectionLink.href = sectionDefaultHref;
 
-					const categoryHead = document.createElement( 'h3' );
-					categoryHead.textContent = category;
-					categoryContainer.appendChild( categoryHead );
+			}
 
-					const categoryContent = document.createElement( 'ul' );
-					categoryContainer.appendChild( categoryContent );
+		}
 
-					for ( const pageName in pages ) {
+		function filterExample( file, exp, tags ) {
 
-						// Create page links
+			const link = links[ file ];
+			const name = getName( file );
+			if ( file in tags ) file += ' ' + tags[ file ].join( ' ' );
+			const res = file.match( exp );
+			let text;
 
-						const pageURL = pages[ pageName ];
+			if ( res && res.length > 0 ) {
 
-						// Localisation
+				link.classList.remove( 'hidden' );
 
-						const listElement = document.createElement( 'li' );
-						categoryContent.appendChild( listElement );
+				for ( let i = 0; i < res.length; i ++ ) {
 
-						const linkElement = createLink( pageName, pageURL );
-						listElement.appendChild( linkElement );
+					text = name.replace( res[ i ], '<b>' + res[ i ] + '</b>' );
 
-						// select current page
+				}
 
-						if ( pageURL === selectedPage ) {
+				link.querySelector( '.title' ).innerHTML = text;
 
-							linkElement.classList.add( 'selected' );
+			} else {
 
-						}
+				link.classList.add( 'hidden' );
+				link.querySelector( '.title' ).innerHTML = name;
 
-						// Gather the main properties for the current subpage
+			}
 
-						pageProperties[ pageName ] = {
-							section: section,
-							category: category,
-							pageURL: pageURL,
-							linkElement: linkElement
-						};
+		}
 
-						// Gather the document titles (used for easy access on browser navigation)
+		function getName( file ) {
 
-						titles[ pageURL ] = pageName;
+			const name = file.split( '_' );
+			name.shift();
+			return name.join( ' / ' );
+
+		}
+
+		function layoutList( files ) {
+
+			for ( const key in files ) {
+
+				let collapsed = true;
+
+				const section = files[ key ];
+
+				for ( let i = 0; i < section.length; i ++ ) {
+
+					const file = section[ i ];
+
+					if ( links[ file ].classList.contains( 'hidden' ) === false ) {
+
+						collapsed = false;
+						break;
 
 					}
 
-					// Gather the category elements for easy access on filtering
+				}
 
-					categoryElements.push( categoryContent );
+				const element = document.querySelector( 'h2[data-category="' + key + '"]' );
+
+				if ( collapsed ) {
+
+					element.classList.add( 'hidden' );
+
+				} else {
+
+					element.classList.remove( 'hidden' );
 
 				}
 
 			}
 
 		}
-
-		// Auto change language url. If a reader open a document in English, when he click "zh", the document he read will auto change into Chinese version
-
-		function autoChangeUrlLanguage( language ) {
-
-			const hash = location.hash;
-			if ( hash === '' ) return;
-			const docType = hash.slice( 0, hash.indexOf( '/' ) + 1 );
-			let docLink = hash.slice( hash.indexOf( '/' ) + 1 );
-			docLink = docLink.slice( docLink.indexOf( '/' ) );
-			location.href = docType + language + docLink;
-
-		}
-
-		// Filtering
 
 		function extractQuery() {
 
@@ -350,215 +389,40 @@
 
 		}
 
-		function updateFilter() {
+		function createElementFromHTML( htmlString ) {
 
-			let v = filterInput.value.trim();
-			v = v.replace( /\s+/gi, ' ' ); // replace multiple whitespaces with a single one
-
-			if ( v !== '' ) {
-
-				window.history.replaceState( {}, '', '?q=' + v + window.location.hash );
-
-			} else {
-
-				window.history.replaceState( {}, '', window.location.pathname + window.location.hash );
-
-			}
-
-			//
-
-			const regExp = new RegExp( filterInput.value, 'gi' );
-
-			for ( let pageName in pageProperties ) {
-
-				const linkElement = pageProperties[ pageName ].linkElement;
-				const categoryClassList = linkElement.parentElement.classList;
-				const filterResults = pageName.match( regExp );
-
-				if ( filterResults !== null && filterResults.length > 0 ) {
-
-					pageName = pageName.replaceAll( regExp, '<b>$&</b>' );
-
-					categoryClassList.remove( 'hidden' );
-					linkElement.innerHTML = pageName;
-
-				} else {
-
-					// Hide all non-matching page names
-
-					categoryClassList.add( 'hidden' );
-
-				}
-
-			}
-
-			displayFilteredPanel();
-
-			updateLink( v );
+			const div = document.createElement( 'div' );
+			div.innerHTML = htmlString.trim();
+			return div.firstChild;
 
 		}
-
-		function updateLink( search ) {
-
-			// update examples link
-
-			if ( search ) {
-
-				const link = sectionLink.href.split( /[?#]/ )[ 0 ];
-				sectionLink.href = `${link}?q=${search}`;
-
-			} else {
-
-				sectionLink.href = sectionDefaultHref;
-
-			}
-
-		}
-
-		function displayFilteredPanel() {
-
-			// Show/hide categories depending on their content
-			// First check if at least one page in this category is not hidden
-
-			categoryElements.forEach( function ( category ) {
-
-				const pages = category.children;
-				const pagesLength = pages.length;
-				const sectionClassList = category.parentElement.classList;
-
-				let hideCategory = true;
-
-				for ( let i = 0; i < pagesLength; i ++ ) {
-
-					const pageClassList = pages[ i ].classList;
-
-					if ( ! pageClassList.contains( 'hidden' ) ) {
-
-						hideCategory = false;
-
-					}
-
-				}
-
-				// If and only if all page names are hidden, hide the whole category
-
-				if ( hideCategory ) {
-
-					sectionClassList.add( 'hidden' );
-
-				} else {
-
-					sectionClassList.remove( 'hidden' );
-
-				}
-
-			} );
-
-		}
-
-		// Routing
-
-		function setUrlFragment( pageName ) { // eslint-disable-line no-unused-vars
-
-			// Handle navigation from the subpages (iframes):
-			// First separate the member (if existing) from the page name,
-			// then identify the subpage's URL and set it as URL fragment (re-adding the member)
-
-			const splitPageName = decomposePageName( pageName, '.', '.' );
-
-			const currentProperties = pageProperties[ splitPageName[ 0 ] ];
-
-			if ( currentProperties ) {
-
-				window.location.hash = currentProperties.pageURL + splitPageName[ 1 ];
-
-				createNewIframe();
-
-			}
-
-		}
-
-		function createNewIframe() {
-
-			// Change the content displayed in the iframe
-			// First separate the member part of the fragment (if existing)
-
-			const hash = window.location.hash.substring( 1 );
-			const splitHash = decomposePageName( hash, '.', '#' );
-
-			// Creating a new Iframe instead of assigning a new src is
-			// a cross-browser solution to allow normal browser navigation;
-			// - only assigning a new src would result in two history states each time.
-
-			// Note: iframe.contentWindow.location.replace(hash) should work, too,
-			// but it doesn't work in Edge with links from the subpages!
-
-			let subtitle;
-
-			const oldIframe = iframe;
-			iframe = oldIframe.cloneNode();
-
-			if ( hash && titles[ splitHash[ 0 ] ] ) {
-
-				iframe.src = splitHash[ 0 ] + '.html' + splitHash[ 1 ];
-				subtitle = titles[ splitHash[ 0 ] ] + splitHash[ 1 ] + ' – ';
-				iframe.style.display = 'unset';
-
-			} else {
-
-				iframe.src = '';
-				subtitle = '';
-				iframe.style.display = 'none';
-
-			}
-
-			document.body.replaceChild( iframe, oldIframe );
-			document.title = subtitle + 'three.js docs';
-
-		}
-
-		function decomposePageName( pageName, oldDelimiter, newDelimiter ) {
-
-			// Helper function for separating the member (if existing) from the pageName
-			// For example: 'Geometry.morphTarget' can be converted to
-			// ['Geometry', '.morphTarget'] or ['Geometry', '#morphTarget']
-			// Note: According RFC 3986 no '#' allowed inside of an URL fragment!
-
-			let parts = [];
-
-			const dotIndex = pageName.indexOf( oldDelimiter );
-
-			if ( dotIndex !== - 1 ) {
-
-				parts = pageName.split( oldDelimiter );
-				parts[ 1 ] = newDelimiter + parts[ 1 ];
-
-			} else {
-
-				parts[ 0 ] = pageName;
-				parts[ 1 ] = '';
-
-			}
-
-			return parts;
-
-		}
-
-		//
-
-		console.log( [
-			'    __     __',
-			' __/ __\\  / __\\__   ____   _____   _____',
-			'/ __/  /\\/ /  /___\\/ ____\\/ _____\\/ _____\\',
-			'\\/_   __/ /   _   / /  __/ / __  / / __  /_   __   _____',
-			'/ /  / / /  / /  / /  / / /  ___/ /  ___/\\ _\\/ __\\/ _____\\',
-			'\\/__/  \\/__/\\/__/\\/__/  \\/_____/\\/_____/\\/__/ /  / /  ___/',
-			'                                         / __/  /  \\__  \\',
-			'                                         \\/____/\\/_____/'
-		].join( '\n' ) );
 
 		</script>
-
+		<template id="PlaceholderHTML">
+			<!DOCTYPE html>
+				<html lang="en">
+					<head>
+						<meta charset="utf-8">
+						<title>three.js examples</title>
+						<meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
+						<link rel="stylesheet" type="text/css" href="../files/main.css">
+						<style>
+						html, body {
+							height: 100%;
+						}
+						body {
+							height: 100%;
+							display: flex;
+							align-items: center;
+							justify-content: center;
+							user-select: none;
+						}
+						</style>
+					</head>
+					<body>
+						Select an example from the sidebar
+					</body>
+				</html>
+		</template>
 	</body>
-
 </html>
